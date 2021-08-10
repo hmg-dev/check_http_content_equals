@@ -1,0 +1,165 @@
+#!/bin/bash
+
+# Copyright (C) 2021, Martin Drößler <m.droessler@handelsblattgroup.com>
+# Copyright (C) 2021, Handelsblatt GmbH
+#
+# This file is part of check_http_content_equals
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+INFO_NAME="check_http_content_equals"
+INFO_AUTHOR="Martin Drößler <m.droessler@handelsblattgroup.com>"
+INFO_DATE="2021-08-10"
+INFO_LICENSE="GPLv3"
+INFO_VERSION="0.1"
+
+export PATH="$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
+
+# Nagios error codes
+EXIT_OK=0
+EXIT_WARN=1
+EXIT_ERR=2
+EXIT_UNKNOWN=3
+
+# defaults
+useragent="Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.6) Gecko/20070725 Firefox/2.0.0.6"
+
+######################################################
+######################################################
+
+##
+# Check program requirements
+# @output string  Parsed, failed requirements
+# @return integer 0|3
+check_requirements() {
+	if ! which curl > /dev/null 2>&1; then
+		printf "[Failed] 'curl' must be installed.\n"
+		return $EXIT_UNKNOWN
+	fi
+	
+	if ! which diff > /dev/null 2>&1; then
+		printf "[Failed] 'diff' must be installed.\n"
+		return $EXIT_UNKNOWN
+	fi
+	
+	return $EXIT_OK
+}
+
+##
+# Usage
+# @output string  The usage screen.
+# @return integer 0
+print_usage() {
+	printf "Usage:  check_http_content_equals --url <string> --compare-to <string> [--compare-to-file <string>] [--ua <string>] [--cookie <data> [--cookie <data>]]\n"
+	printf "OR      %s --help\n" "${INFO_NAME}"
+	printf "OR      %s --version\n\n" "${INFO_NAME}"
+	return 0
+}
+
+##
+# Output version info and credits
+# @output string  version info.
+# @return integer 0
+print_version() {
+	printf "Name:       %s\n" "${INFO_NAME}"
+	printf "Version:    %s (%s)\n" "${INFO_VERSION}" "${INFO_DATE}"
+	printf "Author:     %s\n" "${INFO_AUTHOR}"
+	printf "License:    %s\n" "${INFO_LICENSE}"
+	return 0
+}
+
+######################################################
+######################################################
+
+if ! check_requirements; then
+	exit $EXIT_UNKNOWN
+fi
+
+if [ "${1}" = "--help" ]; then
+	print_usage
+	exit $EXIT_OK
+fi
+if [ "${1}" = "--version" ]; then
+	print_version
+	exit $EXIT_OK
+fi
+
+while [ $# -gt 0  ]; do
+	key=$1
+	shift
+	case $key in
+		--url)
+			url="$1"
+			shift
+			;;
+		--compare-to)
+			compareTo="$1"
+			shift
+			;;
+	  --compare-to-file)
+	  	compareTo=$(cat "$1")
+	  	shift
+	  	;;
+		--cookie)
+			if [ -z "$cookies" ]; then
+				cookies="--cookie \"$1\""
+			else
+				cookies="${cookies} --cookie \"$1\""
+			fi
+			shift
+			;;
+		--ua)
+			useragent="$1"
+			shift 
+			;;
+		*)
+			echo "Invalid argument: '${1}'"
+			print_usage
+			exit 1
+			;;
+	esac
+done
+
+if [[ -z "${url}" || -z "${compareTo}" ]]; then
+	echo "Error! You must specify an url and the content to compare to."
+	print_usage
+	exit 1
+fi
+
+######################################################
+######################################################
+
+curlArgs="--user-agent \"${useragent}\""
+
+if [ ! -z "$cookies" ]; then
+	curlArgs="${curlArgs} ${cookies}"
+fi
+
+content=$(curl -s ${curlArgs} "${url}")
+diffLines=$(diff -aZ --suppress-common-lines <(echo "${content}" | sed -e 's/\r//gi') <(echo "${compareTo}" | sed -e 's/\r//gi'))
+
+if [[ -z "${diffLines}" ]]; then
+	printf "[OK] Content matches!\n"
+	EXIT="$EXIT_OK"
+else 
+	diffLinesSideBySide=$(diff -yaZ --suppress-common-lines <(echo "${content}" | sed -e 's/\r//gi') <(echo "${compareTo}" | sed -e 's/\r//gi'))
+	printf "[CRITICAL] Content differs on \"%d\" lines\n" "$(echo "${diffLinesSideBySide}" | wc -l)"
+	EXIT="$EXIT_ERR"
+fi
+
+echo "Url:           ${url}"
+echo "----------------------------------------"
+echo "Diff:          ${diffLines}"
+
+exit "$EXIT"

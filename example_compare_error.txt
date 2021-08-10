@@ -1,0 +1,16 @@
+
+<!doctype html>
+<html lang="de"><meta charset="utf-8">
+<link rel="stylesheet" type="text/css" href="fefe.css"><link rel="alternate" type="application/rss+xml" title="Text-Feed" href="/rss.xml"><link rel="alternate" type="application/rss+xml" title="HTML-Feed" href="/rss.xml?html"><title>Fefes Blog</title>
+
+<h2><a href="/">Fefes Blog</a></h2>
+
+<b>Wer schöne Verschwörungslinks für mich hat: ab an felix-bloginput (at) fefe.de!</b>
+
+<p style="text-align:right">Fragen?  <a href="/faq.html">Antworten!</a>  Siehe auch: <a href="//alternativlos.org/">Alternativlos</a><p><h3>Mon Nov 16 2009</h3>
+
+<ul>
+<li><a href="?ts=b5ff0762">[l]</a> Heute habe ich ein besonderes Leckerli für euch.  Eine seltene Freude.  Ein Gaumenschmaus erster Güte.  Einen neuen Stylesheet für das Blog hier!  Und zwar, aus aktuellem Anlass, tadaa, <a href="/?css=wikipedia.css">der Wikipedia-Stylesheet</a> von BenBE!
+</ul>
+<p><div style="text-align:center"><a href="/?mon=202108">ganzer Monat</a></div>
+<div style="text-align:right">Proudly made without PHP, Java, Perl, MySQL and Postgres<br><a href="impressum.html">Impressum, Datenschutz</a></div></html>
