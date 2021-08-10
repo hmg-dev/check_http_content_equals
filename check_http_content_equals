@@ -146,14 +146,15 @@ if [ ! -z "$cookies" ]; then
 	curlArgs="${curlArgs} ${cookies}"
 fi
 
-content=$(curl -s ${curlArgs} "${url}")
-diffLines=$(diff -aZ --suppress-common-lines <(echo "${content}" | sed -e 's/\r//gi') <(echo "${compareTo}" | sed -e 's/\r//gi'))
+crawl="curl -s ${curlArgs} ${url}"
+output="$(eval "${crawl}")"
+diffLines=$(diff -aZ --suppress-common-lines <(echo "${output}" | sed -e 's/\r//gi') <(echo "${compareTo}" | sed -e 's/\r//gi'))
 
 if [[ -z "${diffLines}" ]]; then
 	printf "[OK] Content matches!\n"
 	EXIT="$EXIT_OK"
 else 
-	diffLinesSideBySide=$(diff -yaZ --suppress-common-lines <(echo "${content}" | sed -e 's/\r//gi') <(echo "${compareTo}" | sed -e 's/\r//gi'))
+	diffLinesSideBySide=$(diff -yaZ --suppress-common-lines <(echo "${output}" | sed -e 's/\r//gi') <(echo "${compareTo}" | sed -e 's/\r//gi'))
 	printf "[CRITICAL] Content differs on \"%d\" lines\n" "$(echo "${diffLinesSideBySide}" | wc -l)"
 	EXIT="$EXIT_ERR"
 fi
