@@ -8,7 +8,7 @@ Nagios plugin that will check a website and compares the content to a specified 
 
 ## 1. Usage
 ```shell
-Usage:  check_http_content_equals --url <string> --compare-to <string> [--compare-to-file <string>] [--ua <string>] [--cookie <data> [--cookie <data>]]
+Usage:  check_http_content_equals --url <string> --compare-to <string> [--compare-to-file <string>] [--contains] [--ua <string>] [--cookie <data> [--cookie <data>]]
 OR      check_http_content_equals --help
 OR      check_http_content_equals --version
 ```

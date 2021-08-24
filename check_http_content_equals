@@ -34,6 +34,8 @@ EXIT_UNKNOWN=3
 
 # defaults
 useragent="Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.6) Gecko/20070725 Firefox/2.0.0.6"
+compareMode="diff"
+compareFile=""
 
 ######################################################
 ######################################################
@@ -53,6 +55,11 @@ check_requirements() {
 		return $EXIT_UNKNOWN
 	fi
 	
+	if ! which perl > /dev/null 2>&1; then
+		printf "[Failed] 'perl' must be installed.\n"
+		return $EXIT_UNKNOWN
+	fi
+	
 	return $EXIT_OK
 }
 
@@ -61,7 +68,7 @@ check_requirements() {
 # @output string  The usage screen.
 # @return integer 0
 print_usage() {
-	printf "Usage:  check_http_content_equals --url <string> --compare-to <string> [--compare-to-file <string>] [--ua <string>] [--cookie <data> [--cookie <data>]]\n"
+	printf "Usage:  check_http_content_equals --url <string> --compare-to <string> [--compare-to-file <string>] [--contains] [--ua <string>] [--cookie <data> [--cookie <data>]]\n"
 	printf "OR      %s --help\n" "${INFO_NAME}"
 	printf "OR      %s --version\n\n" "${INFO_NAME}"
 	return 0
@@ -107,10 +114,11 @@ while [ $# -gt 0  ]; do
 			compareTo="$1"
 			shift
 			;;
-	  --compare-to-file)
-	  	compareTo=$(cat "$1")
-	  	shift
-	  	;;
+		--compare-to-file)
+			compareFile=$1
+			compareTo=$(cat "$1")
+			shift
+			;;
 		--cookie)
 			if [ -z "$cookies" ]; then
 				cookies="--cookie \"$1\""
@@ -122,6 +130,9 @@ while [ $# -gt 0  ]; do
 		--ua)
 			useragent="$1"
 			shift 
+			;;
+		--contains)
+			compareMode="contains"
 			;;
 		*)
 			echo "Invalid argument: '${1}'"
@@ -148,19 +159,31 @@ fi
 
 crawl="curl -s ${curlArgs} ${url}"
 output="$(eval "${crawl}")"
-diffLines=$(diff -aZ --suppress-common-lines <(echo "${output}" | sed -e 's/\r//gi') <(echo "${compareTo}" | sed -e 's/\r//gi'))
+if [[ "diff" == "${compareMode}" ]]; then
+	diffLines=$(diff -aZ --suppress-common-lines <(echo "${output}" | sed -e 's/\r//gi') <(echo "${compareTo}" | sed -e 's/\r//gi'))
+else 
+	if [[ -n "${compareFile}" ]]; then
+		matchLines=$(perl -0777 -nE '!$#ARGV ? $s=$_ : /\Q$s/ && say $s' ${compareFile} <(echo "${output}" | sed -e 's/\r//gi'))
+	else
+		matchLines=$(perl -0777 -nE '!$#ARGV ? $s=$_ : /\Q$s/ && say $s' <(echo "${compareTo}") <(echo "${output}" | sed -e 's/\r//gi'))
+	fi
+fi
 
-if [[ -z "${diffLines}" ]]; then
+if [[ (-z "${diffLines}" && "diff" == "${compareMode}") || -n "${matchLines}" ]]; then
 	printf "[OK] Content matches!\n"
 	EXIT="$EXIT_OK"
-else 
+elif [[ "diff" == "${compareMode}" ]]; then
 	diffLinesSideBySide=$(diff -yaZ --suppress-common-lines <(echo "${output}" | sed -e 's/\r//gi') <(echo "${compareTo}" | sed -e 's/\r//gi'))
 	printf "[CRITICAL] Content differs on \"%d\" lines\n" "$(echo "${diffLinesSideBySide}" | wc -l)"
+	EXIT="$EXIT_ERR"
+else
+	printf "[CRITICAL] Content does not contain search-string\n"
 	EXIT="$EXIT_ERR"
 fi
 
 echo "Url:           ${url}"
 echo "----------------------------------------"
 echo "Diff:          ${diffLines}"
+echo "Matches:       ${matchLines}"
 
 exit "$EXIT"
